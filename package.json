@@ -1,5 +1,5 @@
 {
-  "name": "shufflestack",
+  "name": "@jasonsychau/shufflestack",
   "version": "1.0.0",
   "description": "animated reordering list",
   "main": "lib/index.js",
@@ -26,5 +26,12 @@
   },
   "dependencies": {
     "deep-equal": "^2.0.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jasonsychau/shufflestack"
+  },
+  "publishConfig": {
+    "registry":"https://npm.pkg.github.com/jasonsychau"
   }
 }

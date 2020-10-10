@@ -166,6 +166,6 @@ Only the first input is displayed: if the value is later changed for the same ke
 
 ## Notes
 
-Avoid over-writing width, position, boxSizing, transform, zIndex for item styles
+Don't over-write width, position, boxSizing, transform, zIndex for item styles
 
-Avoid over-writing position, overflowY for list styles
+Don't over-write position, overflowY for list styles

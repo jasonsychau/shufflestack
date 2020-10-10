@@ -168,8 +168,14 @@ Only the first input is displayed: if the value is later changed for the same ke
 
 Try to not set styles for these:
 
+```
 width, position, boxSizing, transform, zIndex for item styles
+```
 
+and
+
+```
 position, overflowY for list styles
+```
 
 They are important to the functioning of the list.

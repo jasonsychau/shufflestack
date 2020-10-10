@@ -1,6 +1,20 @@
 import * as React from 'react';
-import { ShuffleStackProps, ItemsPair } from '../index';
 var equal = require('deep-equal');
+
+export interface ShuffleStackProps extends React.Props<ShuffleStack> {
+	items: string[];
+	itemStyle?: { [key: string]: string };
+	listStyle?: { [key: string]: string };
+	itemHeight?: number;
+	listWidth?: number;
+	listHeight?: number;
+	animationDuration?: number;
+	indexDelay?: number;
+}
+export type ItemsPair = {
+	prevItems: string[];
+	nextItems: string[];
+}
 
 /*
 	NOTES:
@@ -9,15 +23,30 @@ var equal = require('deep-equal');
 		- important item styles are width, position, boxSizing, transform, zIndex
 		- import list styles are position, overflowY
 */
-export default class ShuffleStack extends React.Component<ShuffleStackProps, {}> {
+class ShuffleStack extends React.Component<ShuffleStackProps, {}> {
 	private readonly delay: number = 1000;
 	private readonly myRef = React.createRef<HTMLDivElement>();
 	private animationQueue: Array<ItemsPair> = [];
+	private prevItems:  string[] = [];
+	private prevListStyle: {[key:string]:string} = {};
+	private prevItemStyle: {[key:string]:string} = {};
 
 	private itemHeight: number = 50;
 	private listWidth: number = 200;
+	private listHeight: number = 500;
 	private animationDuration: number = 500;
 	private indexDelay: number = 100;
+
+	componentDidMount() {
+		this.setNextItems();
+		this.prevListStyle = Object.assign({}, this.props.listStyle);
+		this.prevItemStyle = Object.assign({}, this.props.itemStyle);
+		this.animateDataChanges();
+	}
+
+	shouldComponentUpdate() {
+		return true;
+	}
 
 	componentDidUpdate(prevProps: ShuffleStackProps) {
 		if (this.props.animationDuration&&this.props.animationDuration!==this.delay) {
@@ -30,53 +59,63 @@ export default class ShuffleStack extends React.Component<ShuffleStackProps, {}>
 		const dom = this.myRef.current;
 		if (dom) {
 			// change list
+			let chgLstStyls: { [key:string]: string } = {};
 			if (this.props.listWidth&&this.props.listWidth!==this.delay) {
 				this.listWidth = this.props.listWidth;
-				(dom as HTMLDivElement).style.width = `{this.props.listWidth}px`;
+				let styleWidth = `${this.props.listWidth}px`
+				chgLstStyls.minWidth = styleWidth;
+				chgLstStyls.maxWidth = styleWidth;
+				chgLstStyls.width = styleWidth;
+			}
+			if (this.props.listHeight&&this.props.listHeight!==this.delay) {
+				this.listHeight = this.props.listHeight;
+				let styleHeight = `${this.props.listHeight}px`;
+				chgLstStyls.height = styleHeight;
+				chgLstStyls.minHeight = styleHeight;
+				chgLstStyls.maxHeight = styleHeight;
 			}
 			const nLstStyls = this.props.listStyle
-			if (nLstStyls&&!equal(nLstStyls, prevProps.listStyle)) {
-				let keys: string[] = Object.keys(nLstStyls as object);
-				keys.forEach((key: string)=>{
-					(dom as HTMLDivElement).style.setProperty(key, nLstStyls[key]);
-				});
+			if (nLstStyls&&!equal(nLstStyls, this.prevListStyle)) {
+				this.prevListStyle = Object.assign({}, this.props.listStyle);
+
+				for (const [key, val] of Object.entries(nLstStyls as object)) {
+				  	chgLstStyls[key] = val;
+				}
+			}
+			for (const [key, val] of Object.entries(chgLstStyls as object)) {
+				(dom as HTMLDivElement).style.setProperty(key, val);
 			}
 
 			// change items
 			let chgItmStyls: { [key:string]: string } = {};
 			if (this.props.itemHeight&&this.props.itemHeight!==this.delay) {
 				this.itemHeight = this.props.itemHeight;
-				chgItmStyls.height = `{this.props.itemHeight}px`;
+				chgItmStyls.height = `${this.props.itemHeight}px`;
 			}
 			const nItmStyls = this.props.itemStyle;
-			if (nItmStyls&&!equal(nItmStyls, prevProps.itemStyle)) {
-				let keys: string[] = Object.keys(nItmStyls as object);
-				keys.forEach((key: string)=>{
-					chgItmStyls[key] = nItmStyls[key];
-				});
+			if (nItmStyls&&!equal(nItmStyls, this.prevItemStyle)) {
+				this.prevItemStyle = Object.assign({}, this.props.itemStyle);
+
+				for (const [key, val] of Object.entries(nItmStyls as object)) {
+				  	chgItmStyls[key] = val;
+				}
 			}
-			if (Object.keys(chgItmStyls).length>0) {
-				let keys: string[] = Object.keys(chgItmStyls as object);
-				Array.from(dom.children).forEach((item: Element)=>{
-					keys.forEach((key: string)=>{
-						(item as HTMLDivElement).style.setProperty(key, chgItmStyls[key]);
-					});	
+			if (Object.keys(chgItmStyls as object).length>0) {
+				let max: number = dom.children.length;
+				Array.from(dom.children).forEach((item: Element, index: number)=>{
+					this.setDefaultItemStyles(item as HTMLDivElement, index, max);
+					for (const [key, val] of Object.entries(chgItmStyls as object)) {
+						(item as HTMLDivElement).style.setProperty(key, val);
+					}
 				});
 			}
 		}
 
-		if (!equal(prevProps.items,this.props.items)) {
+		if (!equal(this.prevItems,this.props.items)) {
 			if (this.animationQueue.length>0) {
-				this.animationQueue.push({
-					prevItems:prevProps.items,
-					nextItems:this.props.items
-				});
+				this.setNextItems();
 			} else {
-				console.log("running animation");
-				this.animationQueue.push({
-					prevItems:prevProps.items,
-					nextItems:this.props.items
-				})
+				this.setNextItems();
 				this.animateDataChanges();
 			}
 		}
@@ -85,12 +124,51 @@ export default class ShuffleStack extends React.Component<ShuffleStackProps, {}>
 	render() {
 		return <div
 			ref={this.myRef}
-			style={Object.assign({
-				position: 'relative',
-				overflowY: 'scroll',
-				width: `{this.listWidth}px`
-			},this.props.listStyle) as { [key: string]: string; }}
+			style={Object.assign(this.getDefaultListStyle()
+				,this.props.listStyle) as { [key: string]: string; }}
 		></div>
+	}
+
+	setNextItems(): void {
+		this.animationQueue.push({
+			prevItems:this.prevItems,
+			nextItems:this.props.items
+		});
+		this.prevItems = this.props.items.slice(0);
+	} 
+
+	setDefaultItemStyles(dom:HTMLDivElement, index:number, max:number) {
+		dom.style.borderStyle = 'solid';
+		dom.style.borderWidth = '1px';
+		dom.style.padding = '10px';
+		// dom.style.justifyContent = 'center';
+		// dom.style.alignItems = 'center';
+		dom.style.zIndex = `${max-index}`;
+		dom.style.position = 'absolute';
+		dom.style.transform = `translateY(${this.itemHeight*index}px)`;
+		let styleHeight: string = `${this.itemHeight}px`;
+		dom.style.height = styleHeight;
+		dom.style.maxHeight = styleHeight;
+		dom.style.minHeight = styleHeight;
+		dom.style.width = '100%';
+		dom.style.textAlign = 'center';
+		dom.style.boxSizing = 'border-box';
+		dom.style.backgroundColor = 'white';
+	}
+
+	getDefaultListStyle(): {[key:string]:string} {
+		let width: string = `${this.listWidth}px`;
+		let height: string = `${this.listHeight}px`;
+		return {
+			width: width,
+			minWidth: width,
+			maxWidth: width,
+			height: height,
+			maxheight: height,
+			minheight: height,
+			position: 'relative',
+			overflowY: 'scroll'
+		};
 	}
 
 	animateDataChanges(): Promise<void> {
@@ -284,21 +362,7 @@ export default class ShuffleStack extends React.Component<ShuffleStackProps, {}>
 	makeNewElement(index: number,max:number) {
 		let element: HTMLDivElement = document.createElement('div');
 		element.innerHTML = this.props.items[index];
-		element.style.borderStyle = 'solid';
-		element.style.borderWidth = '1px';
-		element.style.padding = '10px';
-		// element.style.justifyContent = 'center';
-		// element.style.alignItems = 'center';
-		element.style.zIndex = `${max-index}`;
-		element.style.position = 'absolute';
-		element.style.transform = `translateY(${this.itemHeight*index}px)`;
-		element.style.height = `${this.itemHeight}px`;
-		element.style.maxHeight = `${this.itemHeight}px`;
-		element.style.minHeight = `${this.itemHeight}px`;
-		element.style.width = '100%';
-		element.style.textAlign = 'center';
-		element.style.boxSizing = 'border-box';
-		element.style.backgroundColor = 'white';
+		this.setDefaultItemStyles(element, index, max);
 		const itemStyle = this.props.itemStyle;
 		if (itemStyle) {
 			Object.keys(itemStyle as object).forEach((key: string)=>{
@@ -316,3 +380,5 @@ export default class ShuffleStack extends React.Component<ShuffleStackProps, {}>
 		return element;
 	}
 }
+
+export default ShuffleStack;

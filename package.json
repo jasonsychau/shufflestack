@@ -2,7 +2,7 @@
   "name": "@jasonsychau/shufflestack",
   "version": "1.0.0",
   "description": "animated reordering list",
-  "main": "lib/index.js",
+  "main": "./lib/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rm -rf ./lib && tsc",
@@ -15,16 +15,20 @@
   ],
   "author": "Jason Chau",
   "email": "jasonsychau@live.ca",
-  "license": "ISC",
+  "license": "Boost Software License 1.0",
   "devDependencies": {
-    "@types/node": "^14.11.8",
     "@types/react": "^16.9.51",
     "@types/react-dom": "^16.9.8",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "typescript": "^4.0.3"
   },
+  "types": "index.d.ts",
+  "peerDependencies": {
+    "react": "^15.0.0-0 || ^16.0.0-0"
+  },
   "dependencies": {
+    "@types/node": "^14.11.8",
     "deep-equal": "^2.0.4"
   },
   "repository": {
@@ -32,6 +36,6 @@
     "url": "https://github.com/jasonsychau/shufflestack"
   },
   "publishConfig": {
-    "registry":"https://npm.pkg.github.com/jasonsychau"
+    "registry": "https://npm.pkg.github.com/jasonsychau"
   }
 }

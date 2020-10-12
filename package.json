@@ -1,6 +1,6 @@
 {
   "name": "@jasonsychau/shufflestack",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "animated reordering list",
   "main": "./lib/index.js",
   "scripts": {
@@ -10,12 +10,11 @@
   },
   "keywords": [
     "UI",
-    "React",
-    "TypeScript"
+    "ReactJS"
   ],
   "author": "Jason Chau",
   "email": "jasonsychau@live.ca",
-  "license": "Boost Software License 1.0",
+  "license": "ISC",
   "devDependencies": {
     "@types/react": "^16.9.51",
     "@types/react-dom": "^16.9.8",

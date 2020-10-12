@@ -2,7 +2,7 @@
 
 This React component is to animate reordering of list items.
 
-<p align="center"><img src="./example.gif" alt="moving items in a list" /></p>
+![moving items in a list](./example.gif)
 
 ## Install
 

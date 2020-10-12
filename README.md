@@ -12,11 +12,11 @@ npm install git+https://github.com/jasonsychau/shufflestack.git
 
 There are five types for different inputs:
 
-1. [string or HTML](#string-or-HTML)
+1. [string or HTML input](#string-or-HTML)
 2. [HTMLElement input](#htmlelement)
-3. [string or HTML by key-value](#key-value-string-or-html)
-4. [HTMLElement by key-value](#key-value-htmlelement)
-5. [JSX.Element by key-value](#key-value-jsx)
+3. [string or HTML by key-value input](#key-value-string-or-html)
+4. [HTMLElement by key-value input](#key-value-htmlelement)
+5. [JSX.Element by key-value input](#key-value-jsxelement)
 
 ### String or HTML
 
@@ -124,7 +124,7 @@ Input is set with Node.appendChild(INPUT).
 
 Only the first input is displayed: if the value is later changed for the same key, the previous value is shown (unless this key is removed before re-entering).
 
-### Key Value JSX
+### Key Value JSX.Element
 
 ```
 import { ShuffleStackKeyValJSXElement } from '@jasonsychau/shufflestack'

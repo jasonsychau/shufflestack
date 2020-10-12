@@ -2,6 +2,8 @@
 
 This React component is to animate reordering of list items.
 
+<div style="text-align:center"><img src="./example.gif" alt="moving items in a list" /></div>
+
 ## Install
 
 ```
@@ -17,6 +19,8 @@ There are five types for different inputs:
 3. [string or HTML by key-value input](#key-value-string-or-html)
 4. [HTMLElement by key-value input](#key-value-htmlelement)
 5. [JSX.Element by key-value input](#key-value-jsxelement)
+
+Style names are CSS reference (not React camelCase).
 
 ### String or HTML
 

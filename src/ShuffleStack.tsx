@@ -133,11 +133,7 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 	} 
 
 	setDefaultItemStyles(dom:HTMLDivElement, index:number, max:number) {
-		dom.style.borderStyle = 'solid';
-		dom.style.borderWidth = '1px';
-		dom.style.padding = '10px';
-		// dom.style.justifyContent = 'center';
-		// dom.style.alignItems = 'center';
+		dom.style.boxSizing = 'border-box';
 		dom.style.zIndex = `${max-index}`;
 		dom.style.position = 'absolute';
 		dom.style.transform = `translateY(${this.itemHeight*index}px)`;
@@ -146,9 +142,10 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 		dom.style.maxHeight = styleHeight;
 		dom.style.minHeight = styleHeight;
 		dom.style.width = '100%';
-		dom.style.textAlign = 'center';
-		dom.style.boxSizing = 'border-box';
+
 		dom.style.backgroundColor = 'white';
+		dom.style.borderStyle = 'solid';
+		dom.style.borderWidth = '1px';
 	}
 
 	getDefaultListStyle(): StringStringObject {
@@ -176,12 +173,12 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 				let len: number = nextItems.length;
 				if (len===0) {
 					// make all disappear
-					Array.from(dom.children).forEach(item=>{ instanceRef.removeDOMElement(item as HTMLElement); });
+					Array.from(dom.children).forEach((item,idx)=>{ instanceRef.removeDOMElement(item as HTMLElement, 0); });
 					setTimeout(function(){
 						Array.from(dom.children).forEach(item=>{ item.remove(); });
 						instanceRef.animationQueue.shift();
 						resolve(null);
-					},instanceRef.animationDuration+this.delay+this.indexDelay);
+					},this.computeTimeThatsAfterAnimation(0)+this.delay);
 				} else {
 					// rearrange
 					let elementsToRemove: HTMLDivElement[] = [];
@@ -189,11 +186,12 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 					let accountedNewIndices: number[] = [];
 					let oldSize: number = prevItems.length;
 					let maxSize: number = Math.max(len, oldSize);
+					let equalIndices: number = 0;
 					for (let i: number=0;i<len;i++) {
 						if (i>=oldSize) {
 							if (accountedNewIndices.indexOf(i)===-1) {
 								// add new item
-								instanceRef.makeNewElement(i,len,dom);
+								instanceRef.makeNewElement(i,len,dom,len-1-equalIndices);
 							}
 						} else if (!this.isEqualItems(nextItems[i],prevItems[i])) {
 							// console.log("new "+nextItems[i]+" is not equal to old "+prevItems[i])
@@ -216,11 +214,11 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 									let element: HTMLDivElement = dom.children[exIdx] as HTMLDivElement;
 									
 									element.style.zIndex = `${maxSize-i}`;
-									instanceRef.moveDOMElement(element as HTMLElement, i);
+									instanceRef.moveDOMElement(element as HTMLElement, i, exIdx-equalIndices);
 								} else {
 									// add new item
 									// console.log("adding new for "+nextItems[i]);
-									instanceRef.makeNewElement(i,maxSize,dom);
+									instanceRef.makeNewElement(i,maxSize,dom,len-1-equalIndices);
 								}
 							} // else { console.log("new "+nextItems[i]+" is already repositioned"); }
 
@@ -243,12 +241,12 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 									accountedOldIndices.push(i);
 
 									element.style.zIndex = `${maxSize-nIdx}`;
-									instanceRef.moveDOMElement(element as HTMLElement, nIdx);
+									instanceRef.moveDOMElement(element as HTMLElement, nIdx,i-equalIndices);
 								} else { 
 									// remove item
 									// console.log("removing "+prevItems[i]);
 									let element: HTMLDivElement = dom.children[i] as HTMLDivElement;
-									instanceRef.removeDOMElement(element as HTMLElement);
+									instanceRef.removeDOMElement(element as HTMLElement, i-equalIndices);
 									elementsToRemove.push(element);
 								}
 							} // else { console.log("old "+prevItems[i]+" is already positioned"); }
@@ -267,18 +265,20 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 								accountedOldIndices.push(exIdx);
 
 								element.style.zIndex = `${maxSize-i}`;
-								instanceRef.moveDOMElement(element as HTMLElement, i);
+								instanceRef.moveDOMElement(element as HTMLElement, i, exIdx-equalIndices);
 							} else {
 								// make new
-								instanceRef.makeNewElement(i,maxSize,dom);
+								instanceRef.makeNewElement(i,maxSize,dom,len-1-equalIndices);
 							}
+						} else {
+							equalIndices += 1;
 						}
 					}
 					if (oldSize>len) {
 						for (let i: number=len;i<oldSize;i++) {
 							if (accountedOldIndices.indexOf(i)===-1) {
 								let element: HTMLDivElement = dom.children[i] as HTMLDivElement;
-								instanceRef.removeDOMElement(element as HTMLElement);
+								instanceRef.removeDOMElement(element as HTMLElement, i-equalIndices);
 								elementsToRemove.push(element);
 							}
 						}
@@ -310,7 +310,7 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 							instanceRef.animationQueue.shift();
 						// }
 						resolve(null);
-					}, this.animationDuration+len*this.indexDelay+this.delay);
+					}, this.computeTimeThatsAfterAnimation(len-1)+this.delay);
 				}
 			} else {
 				reject(null);
@@ -323,29 +323,30 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 			console.error(err.toString());
 		});
 	}
-	removeDOMElement(element: HTMLElement): void {
+	removeDOMElement(element: HTMLElement, delayIndex: number): void {
 		element.animate([
 			{opacity:1},
 			{opacity:0}
 		], {
-			duration: this.animationDuration
+			duration: this.animationDuration,
+			delay: delayIndex*this.indexDelay
 		});
 		element.style.opacity = '0';
 	}
-	moveDOMElement(element: HTMLElement, index: number): void {
+	moveDOMElement(element: HTMLElement, index: number, delayIndex: number): void {
 		let newTop: string = `translateY(${this.itemHeight*index}px)`
 		element.animate([
 			{transform:element.style.transform},
 			{transform:newTop}
 		],{
 			duration:this.animationDuration,
-			delay:index*this.indexDelay
+			delay:delayIndex*this.indexDelay
 		});
 		setTimeout(function() {
 			element.style.transform = newTop;
-		},this.computeTimeThatsAfterAnimation(index));
+		},this.computeTimeThatsAfterAnimationWithAdjustment(delayIndex));
 	}
-	makeNewElement(index: number,max:number,dom:HTMLElement): void {
+	makeNewElement(index: number,max:number,dom:HTMLElement,delayIndex:number): void {
 		let element: HTMLDivElement = document.createElement('div');
 		this.addItemContent(element,index);
 		// element.innerHTML = this.props.items[index];
@@ -362,13 +363,16 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 			{opacity:1}
 		],{
 			duration:this.animationDuration,
-			delay:index*this.indexDelay
+			delay:delayIndex*this.indexDelay
 		});
 		setTimeout(function() {
 			dom.appendChild(element);
-		}, this.computeTimeThatsAfterAnimation(index));
+		}, this.computeTimeThatsAfterAnimationWithAdjustment(delayIndex));
 	}
-	computeTimeThatsAfterAnimation(index:number): number {
-		return index*this.indexDelay+this.animationDuration-100;
+	computeTimeThatsAfterAnimation(delayIndex:number): number {
+		return delayIndex*this.indexDelay+this.animationDuration;
+	}
+	computeTimeThatsAfterAnimationWithAdjustment(delayIndex:number): number {
+		return this.computeTimeThatsAfterAnimation(delayIndex) - 100;
 	}
 }

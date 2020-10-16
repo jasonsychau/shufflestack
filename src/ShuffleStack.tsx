@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StringStringObject, ShuffleStackProps, ItemsPair, OptionalNumber } from './ShuffleStackDataTypes';
+import { StringStringObject, ShuffleStackProps, ItemsPair, OptionalNumber, AnimationData } from './ShuffleStackDataTypes';
 var equal = require('deep-equal');
 
 /*
@@ -72,8 +72,11 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 				  	chgLstStyls[key] = val;
 				}
 			}
-			for (const [key, val] of Object.entries(chgLstStyls as object)) {
-				(dom as HTMLDivElement).style.setProperty(key, val);
+			if (Object.keys(chgLstStyls as object).length>0) {
+				(dom as HTMLDivElement).style.cssText = "";
+				for (const [key, val] of Object.entries(chgLstStyls as object)) {
+					(dom as HTMLDivElement).style.setProperty(key, val);
+				}
 			}
 
 			// change items
@@ -94,6 +97,7 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 			if (Object.keys(chgItmStyls as object).length>0) {
 				let max: number = dom.children.length;
 				Array.from(dom.children).forEach((item: Element, index: number)=>{
+					(item as HTMLDivElement).style.cssText = "";
 					this.setDefaultItemStyles(item as HTMLDivElement, index, max);
 					for (const [key, val] of Object.entries(chgItmStyls as object)) {
 						(item as HTMLDivElement).style.setProperty(key, val);
@@ -186,12 +190,16 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 					let accountedNewIndices: number[] = [];
 					let oldSize: number = prevItems.length;
 					let maxSize: number = Math.max(len, oldSize);
-					let equalIndices: number = 0;
+					let equalIndices: number[] = [];
+					let animations: AnimationData[] = [];
 					for (let i: number=0;i<len;i++) {
 						if (i>=oldSize) {
 							if (accountedNewIndices.indexOf(i)===-1) {
 								// add new item
-								instanceRef.makeNewElement(i,len,dom,len-1-equalIndices);
+								animations.push({
+									type:'make',
+									index:i
+								});
 							}
 						} else if (!this.isEqualItems(nextItems[i],prevItems[i])) {
 							// console.log("new "+nextItems[i]+" is not equal to old "+prevItems[i])
@@ -214,11 +222,19 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 									let element: HTMLDivElement = dom.children[exIdx] as HTMLDivElement;
 									
 									element.style.zIndex = `${maxSize-i}`;
-									instanceRef.moveDOMElement(element as HTMLElement, i, exIdx-equalIndices);
+									animations.push({
+										type:'move',
+										element:element as HTMLElement,
+										index:i,
+										delayIndex:exIdx
+									});
 								} else {
 									// add new item
 									// console.log("adding new for "+nextItems[i]);
-									instanceRef.makeNewElement(i,maxSize,dom,len-1-equalIndices);
+									animations.push({
+										type:'make',
+										index:i
+									});
 								}
 							} // else { console.log("new "+nextItems[i]+" is already repositioned"); }
 
@@ -241,12 +257,21 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 									accountedOldIndices.push(i);
 
 									element.style.zIndex = `${maxSize-nIdx}`;
-									instanceRef.moveDOMElement(element as HTMLElement, nIdx,i-equalIndices);
+									animations.push({
+										type:'move',
+										element:element as HTMLElement,
+										index: nIdx,
+										delayIndex:i
+									});
 								} else { 
 									// remove item
 									// console.log("removing "+prevItems[i]);
 									let element: HTMLDivElement = dom.children[i] as HTMLDivElement;
-									instanceRef.removeDOMElement(element as HTMLElement, i-equalIndices);
+									animations.push({
+										type:'remove',
+										element:element as HTMLElement,
+										delayIndex:i
+									});
 									elementsToRemove.push(element);
 								}
 							} // else { console.log("old "+prevItems[i]+" is already positioned"); }
@@ -265,24 +290,59 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 								accountedOldIndices.push(exIdx);
 
 								element.style.zIndex = `${maxSize-i}`;
-								instanceRef.moveDOMElement(element as HTMLElement, i, exIdx-equalIndices);
+								animations.push({
+									type:'move',
+									element:element as HTMLElement,
+									index:i,
+									delayIndex:exIdx
+								});
 							} else {
 								// make new
-								instanceRef.makeNewElement(i,maxSize,dom,len-1-equalIndices);
+								animations.push({
+									type:'make',
+									index:i
+								});
 							}
 						} else {
-							equalIndices += 1;
+							equalIndices.push(i);
 						}
 					}
 					if (oldSize>len) {
 						for (let i: number=len;i<oldSize;i++) {
 							if (accountedOldIndices.indexOf(i)===-1) {
 								let element: HTMLDivElement = dom.children[i] as HTMLDivElement;
-								instanceRef.removeDOMElement(element as HTMLElement, i-equalIndices);
+								animations.push({
+									type:'remove',
+									element:element as HTMLElement,
+									delayIndex:i
+								});
 								elementsToRemove.push(element);
 							}
 						}
 					}
+
+					// calculate index delays
+					const makeDelayIndex: number = len - 1 - equalIndices.length;
+					animations.forEach((anm)=>{
+						if (anm.type==='move'||anm.type==='remove') {
+							anm.delayIndex -= equalIndices.reduce((acc,curr)=>{
+								if (curr<anm.delayIndex) {
+									return acc+1;
+								} else { return acc; }
+							},0);
+						}
+					});
+
+					// call animations
+					animations.forEach((anm)=>{
+						if (anm.type==='move') {
+							instanceRef.moveDOMElement(anm.element, anm.index, anm.delayIndex);
+						} else if (anm.type==='make') {
+							instanceRef.makeNewElement(anm.index,maxSize,dom,makeDelayIndex);
+						} else if (anm.type==='remove') {
+							instanceRef.removeDOMElement(anm.element, anm.delayIndex);
+						}
+					});
 
 					setTimeout(function(){
 						// console.log("swapping positions");
@@ -349,7 +409,6 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 	makeNewElement(index: number,max:number,dom:HTMLElement,delayIndex:number): void {
 		let element: HTMLDivElement = document.createElement('div');
 		this.addItemContent(element,index);
-		// element.innerHTML = this.props.items[index];
 		this.setDefaultItemStyles(element, index, max);
 		const itemStyle = this.props.itemStyle;
 		if (itemStyle) {
@@ -357,7 +416,6 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 				element.style.setProperty(key, itemStyle[key]);
 			});
 		}
-		// element.appendChild(this.props.items[i].value);
 		element.animate([
 			{opacity:0},
 			{opacity:1}

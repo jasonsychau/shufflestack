@@ -31,3 +31,19 @@ export type JSXElementPair = {
 	key: string | number;
 	val: JSX.Element
 }
+export type AnimationData = MoveAnimation | MakeAnimation | RemoveAnimation;
+interface MoveAnimation {
+	type: 'move';
+	element: HTMLElement;
+	index: number;
+	delayIndex: number;
+}
+interface MakeAnimation {
+	type: 'make';
+	index: number;
+}
+interface RemoveAnimation {
+	type: 'remove';
+	element: HTMLElement;
+	delayIndex: number;
+}

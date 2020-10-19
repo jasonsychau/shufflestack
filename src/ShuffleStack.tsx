@@ -367,15 +367,13 @@ export default abstract class ShuffleStack<T extends ShuffleStackProps<IT>, IT> 
 							}
 							// console.log(str)
 							dom.appendChild(hidden);
-							instanceRef.animationQueue.shift();
 						// }
 						resolve(null);
 					}, this.computeTimeThatsAfterAnimation(len-1)+this.delay);
 				}
-			} else {
-				reject(null);
-			}
+			} else { reject(null); }
 		}).then(()=>{
+			instanceRef.animationQueue.shift();
 			if (instanceRef.animationQueue.length>0) {
 				return instanceRef.animateDataChanges();
 			} else { return; }

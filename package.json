@@ -1,6 +1,6 @@
 {
   "name": "@jasonsychau/shufflestack",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "animated reordering list",
   "main": "./lib/index.js",
   "scripts": {
